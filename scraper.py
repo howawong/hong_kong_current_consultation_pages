@@ -2,6 +2,7 @@ import scrapy
 from scrapy.crawler import CrawlerProcess
 import scraperwiki
 from datetime import datetime
+from urlparse import urljoin
 
 class ConsultationSpider(scrapy.Spider):
     name = "consultation"
@@ -17,6 +18,7 @@ class ConsultationSpider(scrapy.Spider):
             title_cell, date_cell = row.xpath("td")
             title = title_cell.xpath("a/text()").extract()[0]
             link = title_cell.xpath("a/@href").extract()[0]
+            link = urljoin(response.url, link)
             date_str = date_cell.xpath("text()").extract()[0]
             date = datetime.strptime(date_str,"%d.%m.%Y")
             d = {"title": title, "lang":response.meta['lang'], "date": date, "link": link}

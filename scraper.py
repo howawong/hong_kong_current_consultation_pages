@@ -1,24 +1,29 @@
-# This is a template for a Python scraper on morph.io (https://morph.io)
-# including some code snippets below that you should find helpful
+import scrapy
+from scrapy.crawler import CrawlerProcess
+import scraperwiki
+from datetime import datetime
 
-# import scraperwiki
-# import lxml.html
-#
-# # Read in a page
-# html = scraperwiki.scrape("http://foo.com")
-#
-# # Find something on the page using css selectors
-# root = lxml.html.fromstring(html)
-# root.cssselect("div[align='left']")
-#
-# # Write out to the sqlite database using scraperwiki library
-# scraperwiki.sqlite.save(unique_keys=['name'], data={"name": "susan", "occupation": "software developer"})
-#
-# # An arbitrary query against the database
-# scraperwiki.sql.select("* from data where 'name'='peter'")
+class ConsultationSpider(scrapy.Spider):
+    name = "consultation"
+    def start_requests(self):
+        for lang in ['en', 'tc', 'sc']:
+            yield scrapy.Request('http://www.gov.hk/%s/residents/government/publication/consultation/current.htm' % (lang), meta={'lang':lang})
 
-# You don't have to do things with the ScraperWiki and lxml libraries.
-# You can use whatever libraries you want: https://morph.io/documentation/python
-# All that matters is that your final data is written to an SQLite database
-# called "data.sqlite" in the current working directory which has at least a table
-# called "data".
+
+    def parse(self, response):
+        table = response.xpath("//div[@class='content']/table")[0]
+        rows = table.xpath("tr")
+        for row in rows[1:]:
+            title_cell, date_cell = row.xpath("td")
+            title = title_cell.xpath("a/text()").extract()[0]
+            link = title_cell.xpath("a/@href").extract()[0]
+            date_str = date_cell.xpath("text()").extract()[0]
+            date = datetime.strptime(date_str,"%d.%m.%Y")
+            d = {"title": title, "lang":response.meta['lang'], "date": date, "link": link}
+            print d
+            scraperwiki.sqlite.save(unique_keys=["title", "lang"], data=d)
+process = CrawlerProcess()
+process.crawl(ConsultationSpider)
+process.start()
+
+ 
